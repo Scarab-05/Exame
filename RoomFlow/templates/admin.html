@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoomFlow - Admin Panel</title>
+</head>
+<body>
+    <h1>Admin Panel</h1>
+
+    <h2>Rooms</h2>
+    <ul>
+        {% for room in rooms %}
+        <li>{{ room.name }} - Capacity: {{ room.capacity }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Reservations</h2>
+    <ul>
+        {% for res in reservations %}
+        <li>
+            Room ID: {{ res.room_id }}, Start: {{ res.start_time }}, End: {{ res.end_time }}, Email: {{ res.email }}
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

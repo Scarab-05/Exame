@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoomFlow - Salas Disponíveis</title>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <style>
+        #calendar {
+            max-width: 900px;
+            margin: 40px auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Salas Disponíveis</h1>
+    <ul>
+        {% for room in rooms %}
+        <li>
+            <strong>{{ room.name }}</strong> - Capacidade: {{ room.capacity }}
+            <button onclick="openCalendar({{ room.id }}, '{{ room.name }}')">Ver Calendário</button>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <div id="calendar-modal" style="display:none;">
+        <h2 id="room-title"></h2>
+        <div id="calendar"></div>
+        <button onclick="closeCalendar()">Fechar</button>
+    </div>
+
+    <script>
+        let reservations = [];
+
+        // Fetch existing reservations on page load
+        fetch('/reservations')
+            .then(response => response.json())
+            .then(data => reservations = data);
+
+        function openCalendar(roomId, roomName) {
+            document.getElementById('room-title').innerText = `Calendário para ${roomName}`;
+            document.getElementById('calendar-modal').style.display = 'block';
+
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                events: reservations.filter(res => res.room_id === roomId).map(res => ({
+                    title: `Reservado por ${res.name}`,
+                    start: res.start_time,
+                    end: res.end_time
+                })),
+                selectable: true,
+                select: function(info) {
+                    const start = new Date(info.start);
+                    const end = new Date(info.end);
+
+                    const startDate = start.toLocaleDateString('pt-PT');
+                    const startTime = start.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+                    const endTime = end.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+
+                    const confirmReservation = confirm(`Deseja reservar dia ${startDate} das ${startTime} até as ${endTime}?`);
+                    if (confirmReservation) {
+                        fetch('/reserve', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                room_id: roomId,
+                                start_time: info.startStr,
+                                duration: (new Date(info.end) - new Date(info.start)) / (1000 * 60)
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            alert(data.message || data.error);
+                            if (data.message) {
+                                calendar.addEvent({
+                                    title: `Reservado por você`,
+                                    start: info.startStr,
+                                    end: info.endStr
+                                });
+                            }
+                        });
+                    }
+                },
+                eventClick: function(info) {
+                    const confirmCancel = confirm(`Deseja cancelar esta reserva?`);
+                    if (confirmCancel) {
+                        fetch('/cancel', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                room_id: roomId,
+                                start_time: info.event.start.toISOString()
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            alert(data.message || data.error);
+                            if (data.message) {
+                                info.event.remove();
+                            }
+                        });
+                    }
+                }
+            });
+
+            calendar.render();
+        }
+
+        function closeCalendar() {
+            document.getElementById('calendar-modal').style.display = 'none';
+            document.getElementById('calendar').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
