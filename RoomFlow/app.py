@@ -1,8 +1,11 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from datetime import datetime, timedelta
+from flask_session import Session
 
 app = Flask(__name__)
 app.secret_key = 'a_sua_chave_secreta'  # Substitua por uma chave segura
+app.config['SESSION_TYPE'] = 'filesystem'  # Persist sessions on the filesystem
+Session(app)
 
 # Placeholder para a base de dados
 rooms = [
@@ -93,8 +96,7 @@ def reserve():
 
     room_id = data.get('room_id')
     start_time = datetime.fromisoformat(data.get('start_time')).replace(tzinfo=None)  # Ensure offset-naive
-    duration = timedelta(minutes=data.get('duration'))
-    end_time = start_time + duration
+    end_time = datetime.fromisoformat(data.get('end_time')).replace(tzinfo=None)  # Ensure offset-naive
 
     # Verificar se o horário já passou
     if start_time < datetime.now():
@@ -120,16 +122,17 @@ def reserve():
 @app.route('/cancel', methods=['POST'])
 def cancel_reservation():
     if 'email' not in session:
-        return redirect(url_for('login'))
+        return jsonify({"error": "Usuário não autenticado."}), 401
 
     data = request.json
     email = session['email']
     room_id = data['room_id']
     start_time = data['start_time']
+    end_time = data['end_time']
 
     # Verificar se a reserva existe e se pertence ao utilizador
     for res in reservations:
-        if res['email'] == email and res['room_id'] == room_id and res['start_time'] == start_time:
+        if res['email'] == email and res['room_id'] == room_id and res['start_time'] == start_time and res['end_time'] == end_time:
             reservations.remove(res)
             return jsonify({"message": "Reserva cancelada com sucesso."})
 
