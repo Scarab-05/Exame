@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from flask_session import Session
 
 app = Flask(__name__)
-app.secret_key = 'a_sua_chave_secreta'  # Substitua por uma chave segura
-app.config['SESSION_TYPE'] = 'filesystem'  # Persist sessions on the filesystem
+app.secret_key = 'a_sua_chave_secreta'  # Chave secreta para a aplicação
+app.config['SESSION_TYPE'] = 'filesystem'  # Persistir sessões no sistema de arquivos
 Session(app)
 
 # Placeholder para a base de dados
@@ -88,15 +88,15 @@ def get_reservations():
 @app.route('/reserve', methods=['POST'])
 def reserve():
     data = request.get_json()
-    user_email = session.get('email')  # Fetch user email from session
-    user_name = next((user['name'] for user in users if user['email'] == user_email), None)  # Fetch user name from registered users
+    user_email = session.get('email')  # Buscar email do utilizador na sessão
+    user_name = next((user['name'] for user in users if user['email'] == user_email), None)  # Buscar nome do utilizador registado
 
     if not user_email or not user_name:
         return jsonify({'error': 'Usuário não autenticado.'}), 401
 
     room_id = data.get('room_id')
-    start_time = datetime.fromisoformat(data.get('start_time')).replace(tzinfo=None)  # Ensure offset-naive
-    end_time = datetime.fromisoformat(data.get('end_time')).replace(tzinfo=None)  # Ensure offset-naive
+    start_time = datetime.fromisoformat(data.get('start_time')).replace(tzinfo=None)  # Garantir que o horário não tenha fuso horário
+    end_time = datetime.fromisoformat(data.get('end_time')).replace(tzinfo=None)  # Garantir que o horário não tenha fuso horário
 
     # Verificar se o horário já passou
     if start_time < datetime.now():

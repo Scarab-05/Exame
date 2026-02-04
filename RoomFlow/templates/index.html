@@ -51,38 +51,48 @@
                     end: res.end_time
                 })),
                 selectable: true,
+                selectMirror: true,
                 select: function(info) {
                     const start = new Date(info.start);
-                    const end = new Date(info.end);
-
                     const startDate = start.toLocaleDateString('pt-PT');
                     const startTime = start.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-                    const endTime = end.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 
-                    const confirmReservation = confirm(`Deseja reservar dia ${startDate} das ${startTime} até as ${endTime}?`);
-                    if (confirmReservation) {
-                        fetch('/reserve', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                room_id: roomId,
-                                start_time: info.startStr,
-                                duration: (new Date(info.end) - new Date(info.start)) / (1000 * 60)
+                    const endTimeInput = prompt(`Deseja reservar dia ${startDate} a partir das ${startTime}. Insira a hora de término (HH:MM):`);
+                    if (endTimeInput) {
+                        const [endHour, endMinute] = endTimeInput.split(':').map(Number);
+                        const end = new Date(start);
+                        end.setHours(endHour, endMinute);
+
+                        if (end <= start) {
+                            alert("A hora de término deve ser posterior à hora de início.");
+                            return;
+                        }
+
+                        const confirmReservation = confirm(`Confirma a reserva dia ${startDate} das ${startTime} até as ${end.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}?`);
+                        if (confirmReservation) {
+                            fetch('/reserve', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    room_id: roomId,
+                                    start_time: info.startStr,
+                                    end_time: end.toISOString()
+                                })
                             })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            alert(data.message || data.error);
-                            if (data.message) {
-                                calendar.addEvent({
-                                    title: `Reservado por você`,
-                                    start: info.startStr,
-                                    end: info.endStr
-                                });
-                            }
-                        });
+                            .then(response => response.json())
+                            .then(data => {
+                                alert(data.message || data.error);
+                                if (data.message) {
+                                    calendar.addEvent({
+                                        title: `Reservado por você`,
+                                        start: info.startStr,
+                                        end: end.toISOString()
+                                    });
+                                }
+                            });
+                        }
                     }
                 },
                 eventClick: function(info) {
@@ -95,7 +105,8 @@
                             },
                             body: JSON.stringify({
                                 room_id: roomId,
-                                start_time: info.event.start.toISOString()
+                                start_time: info.event.start.toISOString(),
+                                end_time: info.event.end.toISOString()
                             })
                         })
                         .then(response => response.json())
